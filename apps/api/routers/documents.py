@@ -50,7 +50,7 @@ def extract_document_fields(
     except:
         ids_list = []
 
-    required_fields = set()
+    field_instructions = {}
     try:
         if ids_list:
             versions = db.query(TemplateVersion).filter(TemplateVersion.template_id.in_(ids_list)).all()
@@ -59,19 +59,18 @@ def extract_document_fields(
             
         for v in versions:
             if v.field_mappings:
-                for k in v.field_mappings.keys():
-                    required_fields.add(k)
+                for k, instruction in v.field_mappings.items():
+                    field_instructions[k] = instruction
     except Exception:
         pass
         
     # If no fields required, fallback to defaults
-    if not required_fields:
-        required_fields = {"deponent_name", "father_name", "address", "survey_no", "consideration_value", "registration_date"}
-        
-    required_fields = list(required_fields)
+    if not field_instructions:
+        fallback_fields = ["deponent_name", "father_name", "address", "survey_no", "consideration_value", "registration_date"]
+        field_instructions = {f: f for f in fallback_fields}
         
     extractor = AIExtractorService()
-    extracted_values = extractor.extract_fields(filepath, required_fields)
+    extracted_values = extractor.extract_fields(filepath, field_instructions)
     
     # Format the response for the frontend
     formatted_data = []

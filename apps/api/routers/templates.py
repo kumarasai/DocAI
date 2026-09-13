@@ -130,3 +130,23 @@ def list_templates(db: Session = Depends(get_db)):
     except Exception as e:
         # Fallback to empty list if DB isn't initialized properly
         return []
+
+from pydantic import BaseModel
+
+class UpdateMappingsRequest(BaseModel):
+    mappings: Dict[str, str]
+
+@router.post("/{template_id}/mappings")
+def update_template_mappings(template_id: str, req: UpdateMappingsRequest, db: Session = Depends(get_db)):
+    version = db.query(TemplateVersion).filter(TemplateVersion.template_id == template_id).first()
+    if not version:
+        raise HTTPException(status_code=404, detail="Template version not found")
+        
+    version.field_mappings = req.mappings
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to update mappings")
+        
+    return {"status": "success", "mappings": version.field_mappings}

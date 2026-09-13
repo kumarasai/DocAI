@@ -13,7 +13,7 @@ class AIExtractorService:
         else:
             self.client = None
 
-    def extract_fields(self, file_path: str, required_fields: list[str]) -> dict:
+    def extract_fields(self, file_path: str, required_fields: dict) -> dict:
         """
         Uses Gemini Native File API to extract required fields from documents (PDF/Images).
         Returns a dict of field names to extracted values.
@@ -21,12 +21,12 @@ class AIExtractorService:
         if not self.client:
             print("WARNING: Gemini API Key not found. Using mock extraction.")
             return {
-                field: f"Mock Data for {field}" for field in required_fields
+                field: f"Mock Data for {field}" for field in required_fields.keys()
             }
 
         prompt = f"""
         You are an expert legal document analyzer.
-        Read the provided document and find the information for the specific requested fields.
+        Read the provided document and extract information based on the specific instructions provided for each field.
         
         CRITICAL RULES FOR EXTRACTION:
         1. MAXIMUM EXTRACTION (AVOID "NOT FOUND"): You must do everything in your power to locate the requested fields. Only return "NOT FOUND" if the information is completely missing from the document. If you can deduce the answer from context (e.g. splitting a full name into first/last, or finding a location without exact explicit labels), DO SO.
@@ -34,10 +34,10 @@ class AIExtractorService:
         3. REGIONAL LANGUAGES (e.g., Telugu): If the document is in a regional language, but the requested fields imply English output, you MUST translate the extracted values into English.
         4. SPECIFIC NUMBER FORMATTING: When extracting monetary amounts, if asked for the number, extract just the number (e.g. "2,18,00,000" from "Rs. 2,18,00,000/-"). If asked for words, extract just the words.
         
-        Requested Fields:
-        {json.dumps(required_fields)}
+        Requested Fields and Custom Instructions:
+        {json.dumps(required_fields, indent=2)}
         
-        Return ONLY a JSON object where keys are exactly the requested fields, and values are the extracted strings.
+        Return ONLY a JSON object where keys are exactly the requested field names, and values are the extracted strings.
         """
 
         import time
@@ -135,7 +135,7 @@ class AIExtractorService:
                 return val.strip()
 
             # Ensure all required fields exist in response and sanitize them
-            for field in required_fields:
+            for field in required_fields.keys():
                 if field not in extracted_data:
                     extracted_data[field] = "NOT FOUND"
                 else:
@@ -152,11 +152,11 @@ class AIExtractorService:
             # If it's a 503 or 429 error, let the user know specifically
             error_str = str(e).upper()
             if "503" in error_str or "UNAVAILABLE" in error_str:
-                return {field: "Google API Overloaded" for field in required_fields}
+                return {field: "Google API Overloaded" for field in required_fields.keys()}
             if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str or "QUOTA" in error_str:
-                return {field: "API Quota Exceeded" for field in required_fields}
+                return {field: "API Quota Exceeded" for field in required_fields.keys()}
                 
-            return {field: "AI Extraction Error" for field in required_fields}
+            return {field: "AI Extraction Error" for field in required_fields.keys()}
         finally:
             if uploaded_file:
                 try:

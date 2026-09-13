@@ -10,6 +10,8 @@ export default function Templates() {
   const [activeTemplate, setActiveTemplate] = useState<string | null>(null);
   const [templates, setTemplates] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editableMappings, setEditableMappings] = useState<Record<string, string>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -24,10 +26,46 @@ export default function Templates() {
         setTemplates(data);
         if (data.length > 0 && !activeTemplate) {
           setActiveTemplate(data[0].id);
+          setEditableMappings(data[0].mappings || {});
+        } else if (activeTemplate) {
+          const active = data.find((t: any) => t.id === activeTemplate);
+          if (active) setEditableMappings(active.mappings || {});
         }
       }
     } catch (e) {
       console.error("Failed to fetch templates", e);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTemplate && templates.length > 0) {
+      const active = templates.find(t => t.id === activeTemplate);
+      if (active) {
+        setEditableMappings(active.mappings || {});
+      }
+    }
+  }, [activeTemplate, templates]);
+
+  const saveMappings = async () => {
+    if (!activeTemplate) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/templates/${activeTemplate}/mappings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mappings: editableMappings })
+      });
+      if (res.ok) {
+        alert("Mappings saved successfully!");
+        await fetchTemplates();
+      } else {
+        alert("Failed to save mappings");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Error saving mappings");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -194,8 +232,12 @@ export default function Templates() {
                 <button className="px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-medium rounded border border-indigo-100 hover:bg-indigo-100 transition-colors flex items-center gap-1.5">
                   <PlayCircle className="w-3.5 h-3.5" /> Test with Sample Deed
                 </button>
-                <button className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded hover:bg-indigo-700 transition-colors flex items-center gap-1.5 shadow-sm">
-                  <Save className="w-3.5 h-3.5" /> Save Changes
+                <button 
+                  onClick={saveMappings}
+                  disabled={saving}
+                  className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded hover:bg-indigo-700 transition-colors flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+                >
+                  <Save className="w-3.5 h-3.5" /> {saving ? "Saving..." : "Save Changes"}
                 </button>
               </div>
             </div>
@@ -244,7 +286,15 @@ export default function Templates() {
                           <td className="px-4 py-3 font-mono text-indigo-600 font-bold bg-indigo-50/30 group-hover:bg-indigo-50/50 transition-colors border-r border-slate-100">
                             <span className="text-indigo-300 mr-1">{'<>'}</span>{`{{${key}}}`}
                           </td>
-                          <td className="px-4 py-3 font-medium text-slate-800">Auto-mapped to AI Extraction</td>
+                          <td className="px-4 py-3 font-medium text-slate-800">
+                            <input 
+                              type="text" 
+                              value={editableMappings[key] || ''} 
+                              onChange={(e) => setEditableMappings({...editableMappings, [key]: e.target.value})}
+                              placeholder="e.g. Extract the date of affirmation"
+                              className="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all placeholder-slate-300"
+                            />
+                          </td>
                           <td className="px-4 py-3">
                             <span className="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] font-medium rounded">Text</span>
                           </td>
