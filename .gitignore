@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.env
+
+# Node
+node_modules/
+.next/
+out/
+build/
+dist/
+
+# Logs
+error_log.txt
+*.log
+
+# Editor
+.vscode/
+.idea/
+.DS_Store
+
+# Uploads and User Data (we shouldn't commit user's generated/uploaded docs)
+apps/api/uploads/
+apps/api/templates/
+apps/api/db.sqlite3
+apps/api/*.sqlite3

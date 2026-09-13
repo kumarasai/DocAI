@@ -1,0 +1,15 @@
+celery
+redis
+psycopg2-binary
+sqlalchemy
+pydantic
+pydantic-settings
+boto3
+paddleocr
+python-docx
+PyMuPDF
+openpyxl
+reportlab
+sentry-sdk
+posthog
+google-genai
